@@ -13,7 +13,6 @@ export default function Home() {
     setAudioUrl('');
     setRewritten('');
 
-    // Rewrite the prompt with Groq
     const rewriteRes = await fetch('/api/rewritePrompt', {
       method: 'POST',
       body: JSON.stringify({ prompt: userPrompt }),
@@ -21,7 +20,6 @@ export default function Home() {
     const { rewritten } = await rewriteRes.json();
     setRewritten(rewritten);
 
-    // Generate music with Replicate
     const genRes = await fetch('/api/generateMusic', {
       method: 'POST',
       body: JSON.stringify({ prompt: rewritten }),
