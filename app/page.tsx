@@ -7,26 +7,38 @@ export default function Home() {
   const [rewritten, setRewritten] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleGenerate = async () => {
     setLoading(true);
     setAudioUrl('');
     setRewritten('');
+    setError('');
 
-    const rewriteRes = await fetch('/api/rewritePrompt', {
-      method: 'POST',
-      body: JSON.stringify({ prompt: userPrompt }),
-    });
-    const { rewritten } = await rewriteRes.json();
-    setRewritten(rewritten);
+    try {
+      const rewriteRes = await fetch('/api/rewritePrompt', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: userPrompt }),
+      });
 
-    const genRes = await fetch('/api/generateMusic', {
-      method: 'POST',
-      body: JSON.stringify({ prompt: rewritten }),
-    });
-    const { url } = await genRes.json();
-    setAudioUrl(url);
-    setLoading(false);
+      if (!rewriteRes.ok) throw new Error(`rewritePrompt failed (${rewriteRes.status})`);
+      const { rewritten } = await rewriteRes.json();
+      setRewritten(rewritten);
+
+      const genRes = await fetch('/api/generateMusic', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: rewritten }),
+      });
+
+      if (!genRes.ok) throw new Error(`generateMusic failed (${genRes.status})`);
+      const { url } = await genRes.json();
+      setAudioUrl(url);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Unexpected error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,6 +79,12 @@ export default function Home() {
       >
         {loading ? 'Generating...' : 'Generate Audio'}
       </button>
+
+      {error && (
+        <div style={{ marginTop: '1.5rem', color: '#c00', fontWeight: 500 }}>
+          Error: {error}
+        </div>
+      )}
 
       {rewritten && (
         <div style={{ marginTop: '2rem', padding: '1rem', background: '#f9f9f9', border: '1px solid #eee', borderRadius: '6px' }}>
