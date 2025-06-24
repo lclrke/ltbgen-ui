@@ -14,7 +14,7 @@ export async function POST(req: Request): Promise<Response> {
         version: "445cd11f0c4b2d16c13f069dc42c35c410766b8d8dc4eace50bb473536f32626", // your model version
         input: {
           prompt,
-          duration: 15,
+          duration: 8,
           top_k: 250,
           top_p: 0.8,
           temperature: 1,
