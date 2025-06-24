@@ -11,7 +11,7 @@ export async function POST(req: Request): Promise<Response> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: "445cd11f0c4b2d16c13f069dc42c35c410766b8d8dc4eace50bb473536f32626", // your model version
+        version: "445cd11f0c4b2d16c13f069dc42c35c410766b8d8dc4eace50bb473536f32626",
         input: {
           prompt,
           duration: 8,
@@ -26,9 +26,11 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const result = await response.json();
-    const url = result?.output?.[0];
-
-    return new Response(JSON.stringify({ url }), {
+    
+    return new Response(JSON.stringify({ 
+      predictionId: result.id,
+      status: result.status 
+    }), {
       headers: { "Content-Type": "application/json" },
     });
 
