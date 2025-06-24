@@ -8,14 +8,66 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+
+  const pollPrediction = async (predictionId: string) => {
+    const maxAttempts = 150; // 7.5 minutes
+    let attempts = 0;
+
+    console.log(`🎵 Starting to poll prediction: ${predictionId}`);
+
+    const poll = async () => {
+      try {
+        attempts++;
+        console.log(`📡 Polling attempt ${attempts}/${maxAttempts} for prediction ${predictionId}`);
+        
+        const response = await fetch('/api/checkPrediction', {
+          method: 'POST',
+          body: JSON.stringify({ predictionId }),
+        });
+
+        const { status, output, error: predError } = await response.json();
+        console.log(`📊 Poll result - Status: ${status}`, { output: output ? 'Has output' : 'No output', error: predError });
+        
+        setStatus(`Status: ${status} (attempt ${attempts})`);
+
+        if (status === 'succeeded' && output) {
+          // Handle both string and array output formats
+          const audioUrl = Array.isArray(output) ? output[0] : output;
+          console.log(`✅ Success! Audio URL received: ${audioUrl}`);
+          setAudioUrl(audioUrl);
+          setLoading(false);
+        } else if (status === 'failed') {
+          console.log(`❌ Prediction failed:`, predError);
+          setError(predError || 'Prediction failed');
+          setLoading(false);
+        } else if (attempts < maxAttempts) {
+          console.log(`⏳ Still processing... will check again in 3 seconds`);
+          setTimeout(poll, 3000); // Poll every 3 seconds
+        } else {
+          console.log(`⏰ Timeout reached after ${attempts} attempts`);
+          setError('Prediction timed out');
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.log(`💥 Error during polling:`, err);
+        setError(err.message || 'Error checking prediction');
+        setLoading(false);
+      }
+    };
+
+    poll();
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
     setAudioUrl('');
     setRewritten('');
     setError('');
+    setStatus('');
 
     try {
+      // Rewrite prompt
       const rewriteRes = await fetch('/api/rewritePrompt', {
         method: 'POST',
         body: JSON.stringify({ prompt: userPrompt }),
@@ -25,18 +77,22 @@ export default function Home() {
       const { rewritten } = await rewriteRes.json();
       setRewritten(rewritten);
 
+      // Start music generation
       const genRes = await fetch('/api/generateMusic', {
         method: 'POST',
         body: JSON.stringify({ prompt: rewritten }),
       });
 
       if (!genRes.ok) throw new Error(`generateMusic failed (${genRes.status})`);
-      const { url } = await genRes.json();
-      setAudioUrl(url);
+      const { predictionId } = await genRes.json();
+      
+      // Start polling for completion
+      setStatus('Status: starting');
+      pollPrediction(predictionId);
+
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Unexpected error');
-    } finally {
       setLoading(false);
     }
   };
@@ -79,6 +135,12 @@ export default function Home() {
       >
         {loading ? 'Generating...' : 'Generate Audio'}
       </button>
+
+      {status && (
+        <div style={{ marginTop: '1rem', color: '#666', fontStyle: 'italic' }}>
+          {status}
+        </div>
+      )}
 
       {error && (
         <div style={{ marginTop: '1.5rem', color: '#c00', fontWeight: 500 }}>
