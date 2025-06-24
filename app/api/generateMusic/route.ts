@@ -26,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     const result = await response.json();
-    const url = result?.output?.[0];
+    const url = result?.output;
 
     return new Response(JSON.stringify({ url }), {
       headers: { "Content-Type": "application/json" },
